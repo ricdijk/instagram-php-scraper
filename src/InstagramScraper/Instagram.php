@@ -1596,6 +1596,7 @@ class Instagram
     /**
      * @param bool $force
      * @param bool|TwoStepVerificationInterface $twoStepVerificator
+     * @param bool $fastLogin
      *
      * $support_two_step_verification true works only in cli mode - just run login in cli mode - save cookie to file and use in any mode
      *
@@ -1606,7 +1607,7 @@ class Instagram
      * @throws InstagramException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function login($force = false, $twoStepVerificator = null)
+    public function login($force = false, $twoStepVerificator = null, $fastLogin = false)
     {
         if ($this->sessionUsername == null || $this->sessionPassword == null) {
             throw new InstagramAuthException("User credentials not provided");
@@ -1617,7 +1618,7 @@ class Instagram
         }
 
         $session = static::$instanceCache->get($this->getCacheKey());
-        if ($force || !$this->isLoggedIn($session)) {
+        if ($force || (!$fastLogin && !$this->isLoggedIn($session, $fastLogin))) {
             $response = Request::get(Endpoints::BASE_URL);
             if ($response->code !== static::HTTP_OK) {
                 throw new InstagramException('Response code is ' . $response->code . '. Body: ' . static::getErrorBody($response->body) . ' Something went wrong. Please report issue.', $response->code);
