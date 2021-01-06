@@ -751,14 +751,42 @@ class Instagram
     }
 
     /**
-     * @param      $code
+     * @param $mediaId
      * @param int $count
      * @param null $maxId
      *
      * @return Comment[]
      * @throws InstagramException
      */
-    public function getMediaCommentsByCode($code, $count = 10, $maxId = null)
+    public function getPaginateMediaCommentsById($mediaId, $count = 10, $maxId = null)
+    {
+        $code = Media::getCodeFromId($mediaId);
+        return static::getMediaCommentsByCode($code, $count, $maxId, true);
+    }
+
+    /**
+      * @param $mediaId
+      * @param int $count
+      * @param null $maxId
+      *
+      * @return Comment[]
+      * @throws InstagramException
+      */
+     public function getPaginateMediaCommentsByCode($code, $count = 10, $maxId = null)
+     {
+         return static::getMediaCommentsByCode($code, $count, $maxId, true);
+     }
+
+     /**
+      * @param      $code
+      * @param int  $count
+      * @param null $maxId
+      * @param bool $paginateInd (=false)
+      *
+      * @return Comment[]
+      * @throws InstagramException
+      */
+    public function getMediaCommentsByCode($code, $count = 10, $maxId = null, $paginateInd = false)
     {
         $comments = [];
         $index = 0;
@@ -812,7 +840,17 @@ class Instagram
                 $count = $numberOfComments;
             }
         }
-        return $comments;
+        if ($paginateInd)
+        {
+          $ret = new \stdClass();
+          $ret->hasPrevious      = $hasPrevious;
+          $ret->commentsCount    = $numberOfComments;
+          $ret->maxId            = $maxId;
+          $ret->comments         = $comments;
+
+          return $ret;
+        }
+        else return $comments;
     }
 
     /**
@@ -1109,8 +1147,14 @@ class Instagram
             return $toReturn;
         }
 
+        $slug = $arr['graphql']['location']['slug'];
+        $name = $arr['graphql']['location']['name'];
+        $rvd_i = 0;
         foreach ($nodes as $mediaArray) {
-            $medias[] = Media::create($mediaArray['node']);
+            $medias[$rvd_i] = Media::create($mediaArray['node']);
+            $medias[$rvd_i] -> setLocationName($name);
+            $medias[$rvd_i] -> setLocationSlug($slug);
+            $rvd_i++;
         }
 
         $maxId = $arr['graphql']['location']['edge_location_to_media']['page_info']['end_cursor'];
@@ -1175,12 +1219,20 @@ class Instagram
         }
         $this->parseCookies($response->headers);
         $jsonResponse = $this->decodeRawBodyToJson($response->raw_body);
-        $nodes = $jsonResponse['location']['top_posts']['nodes'];
+        $nodes = $jsonResponse['graphql']['location']['edge_location_to_top_posts']['edges'];
         $medias = [];
+
+        $slug = $jsonResponse['graphql']['location']['slug'];
+        $name = $jsonResponse['graphql']['location']['name'];
+        $rvd_i=0;
         foreach ($nodes as $mediaArray) {
-            $medias[] = Media::create($mediaArray);
-        }
-        return $medias;
+            $medias[$rvd_i] = Media::create($mediaArray['node']);
+            $medias[$rvd_i] -> setLocationName($name);
+            $medias[$rvd_i] -> setLocationSlug($slug);
+            $rvd_i++;
+          }
+
+      return $medias;
     }
 
     /**
@@ -1209,11 +1261,17 @@ class Instagram
             $this->parseCookies($response->headers);
             $arr = $this->decodeRawBodyToJson($response->raw_body);
             $nodes = $arr['graphql']['location']['edge_location_to_media']['edges'];
+
+            $slug = $arr['graphql']['location']['slug'];
+            $name = $arr['graphql']['location']['name'];
+            
             foreach ($nodes as $mediaArray) {
                 if ($index === $quantity) {
                     return $medias;
                 }
                 $medias[] = Media::create($mediaArray['node']);
+                $medias[$index] -> setLocationName($name);
+                $medias[$index] -> setLocationSlug($slug);
                 $index++;
             }
             if (empty($nodes)) {
