@@ -1676,7 +1676,7 @@ class Instagram
         }
 
         $session = static::$instanceCache->get($this->getCacheKey());
-        if ($force || (!$fastLogin && !$this->isLoggedIn($session))) {
+        if ($force || (!$this->isLoggedIn($session, $fastLogin))) {
             $response = Request::get(Endpoints::BASE_URL);
             if ($response->code !== static::HTTP_OK) {
                 throw new InstagramException('Response code is ' . $response->code . '. Body: ' . static::getErrorBody($response->body) . ' Something went wrong. Please report issue.', $response->code);
@@ -1739,11 +1739,11 @@ class Instagram
      * @return array
      * @throws InstagramAuthException
      */
-    public function loginWithSessionId($sessionId)
+    public function loginWithSessionId($sessionId, $fastLogin=false)
     {
         $session = ['sessionid' => $sessionId, 'csrftoken' => md5( rand( 1, 5000 ) )];
 
-        if (!$this->isLoggedIn($session)) {
+        if (!$this->isLoggedIn($session, $fastLogin)) {
             throw new InstagramAuthException('Login with session went wrong. Please report issue.');
         } else {
             $this->userSession = $session;
@@ -1765,11 +1765,12 @@ class Instagram
      *
      * @return bool
      */
-    public function isLoggedIn($session)
+    public function isLoggedIn($session, $fastLogin=false)
     {
         if ($session === null || !isset($session['sessionid'])) {
             return false;
         }
+        elseif ($fastLogin) return true; //with fast option assume logged in when session is present
         $sessionId = $session['sessionid'];
         $csrfToken = $session['csrftoken'];
         $headers = [
