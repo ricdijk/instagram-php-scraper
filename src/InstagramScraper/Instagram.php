@@ -1264,7 +1264,7 @@ class Instagram
 
             $slug = $arr['graphql']['location']['slug'];
             $name = $arr['graphql']['location']['name'];
-            
+
             foreach ($nodes as $mediaArray) {
                 if ($index === $quantity) {
                     return $medias;
@@ -1676,7 +1676,7 @@ class Instagram
         }
 
         $session = static::$instanceCache->get($this->getCacheKey());
-        if ($force || (!$fastLogin && !$this->isLoggedIn($session, $fastLogin))) {
+        if ($force || (!$fastLogin && !$this->isLoggedIn($session))) {
             $response = Request::get(Endpoints::BASE_URL);
             if ($response->code !== static::HTTP_OK) {
                 throw new InstagramException('Response code is ' . $response->code . '. Body: ' . static::getErrorBody($response->body) . ' Something went wrong. Please report issue.', $response->code);
